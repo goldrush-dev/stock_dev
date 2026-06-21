@@ -1,0 +1,14 @@
+mode: real
+base_url: "https://openapi.koreainvestment.com:9443"
+
+app_key: "실전_APP_KEY"
+app_secret: "실전_APP_SECRET"
+
+cano: "실전계좌_앞8자리"
+acnt_prdt_cd: "01"
+
+stock_code: "005930"
+stock_name: "삼성전자"
+
+buy_amount: 1000000
+interval_sec: 5
