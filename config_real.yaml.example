@@ -1,14 +1,16 @@
-mode: real
-base_url: "https://openapi.koreainvestment.com:9443"
+mode: virtual
+base_url: "https://openapivts.koreainvestment.com:29443"
 
-app_key: "실전_APP_KEY"
-app_secret: "실전_APP_SECRET"
+app_key: "aaa"
+app_secret: "sssY="
 
-cano: "실전계좌_앞8자리"
+cano: "50194135"
 acnt_prdt_cd: "01"
 
 stock_code: "005930"
 stock_name: "삼성전자"
 
-buy_amount: 1000000
-interval_sec: 5
+# 한 번 매수할 금액
+buy_amount: 3000000
+
+simulation_mode: true

@@ -1,5 +1,7 @@
 import requests
 
+from logger import write_error
+from datetime import datetime, timedelta
 
 class KisApi:
     def __init__(self, config):
@@ -29,7 +31,11 @@ class KisApi:
         data = r.json()
 
         if r.status_code != 200 or "access_token" not in data:
-            raise RuntimeError(f"토큰 발급 실패: {data}")
+            msg = f"토큰 발급 실패 : {data}"
+
+            write_error(msg)
+
+            raise RuntimeError(msg)
 
         self.token = data["access_token"]
         print("TOKEN OK")
@@ -61,7 +67,11 @@ class KisApi:
         data = r.json()
 
         if data.get("rt_cd") != "0":
-            raise RuntimeError(f"현재가 조회 실패: {data}")
+            msg = f"현재가 조회 실패 : {data}"
+
+            write_error(msg)
+
+            raise RuntimeError(msg)
 
         output = data["output"]
 
@@ -95,7 +105,11 @@ class KisApi:
         data = r.json()
 
         if data.get("rt_cd") != "0":
-            raise RuntimeError(f"잔고 조회 실패: {data}")
+            msg = f"잔고 조회 실패 : {data}"
+
+            write_error(msg)
+
+            raise RuntimeError(msg)
 
         return data
 
@@ -125,7 +139,49 @@ class KisApi:
 
         if data.get("rt_cd") == "0":
             print(f"{name} 주문 성공:", data.get("output", {}))
+
         else:
-            print(f"{name} 주문 실패:", data)
+            msg = f"{name} 주문 실패 : code={code}, qty={qty}, price={price}, data={data}"
+
+            print(msg)
+
+            write_error(msg)
 
         return data
+
+
+    def get_daily_prices(self, code, days=100):
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days * 2)
+
+        r = requests.get(
+            self.base_url + "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+            headers=self._headers("FHKST03010100"),
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": code,
+                "FID_INPUT_DATE_1": start_date.strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": end_date.strftime("%Y%m%d"),
+                "FID_PERIOD_DIV_CODE": "D",
+                "FID_ORG_ADJ_PRC": "1",
+            },
+        )
+
+        data = r.json()
+
+        if data.get("rt_cd") != "0":
+            msg = f"일봉 조회 실패 : {data}"
+            write_error(msg)
+            raise RuntimeError(msg)
+
+        output = data.get("output2", [])
+
+        prices = []
+        for item in output:
+            close_price = item.get("stck_clpr")
+            if close_price:
+                prices.append(int(close_price))
+
+        prices.reverse()  # 오래된 날짜 → 최신 날짜
+
+        return prices[-days:]
