@@ -26,10 +26,10 @@ def get_market_state():
     now_time = now.time()
 
     if MARKET_START <= now_time < MARKET_FAST_START:
-        return "MARKET", 5
+        return "MARKET", 60
 
     if MARKET_FAST_START <= now_time <= MARKET_END:
-        return "CLOSE_WATCH", 1
+        return "CLOSE_WATCH", 10
 
     return "OFF_MARKET", 300
 
@@ -78,8 +78,9 @@ def main():
 
             # 상태가 바뀔 때만 로그 기록
             if prev_state != state:
-                if state in ("MARKET", "CLOSE_WATCH"):
+                if prev_state not in ("MARKET", "CLOSE_WATCH") and state in ("MARKET", "CLOSE_WATCH"):
                     write_log("MARKET_OPEN", "장중 자동매매 시작")
+
                 elif prev_state in ("MARKET", "CLOSE_WATCH") and state == "OFF_MARKET":
                     write_log("MARKET_CLOSE", "장 종료. 자동매매 대기 전환")
 

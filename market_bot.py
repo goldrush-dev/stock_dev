@@ -3,8 +3,9 @@ from datetime import datetime
 
 from ai_strategy import make_balance_info, ai_strategy
 from indicator import calc_ma, calc_rsi
-from logger import write_log, write_error
+from logger import write_log
 
+last_status_log_hour = -1
 
 def print_balance(balance):
     print()
@@ -110,7 +111,7 @@ def run_once(api, config):
             ma60=ma60,
             rsi=rsi,
         )
-        
+
         print()
         print("========== AI 전략 판단 ==========")
         print("판단       :", signal["action"])
@@ -119,6 +120,40 @@ def run_once(api, config):
         print("신뢰도     :", str(signal.get("confidence", 0)) + "%")
         print("이유       :", signal["reason"])
         print("=================================")
+
+        # log
+        global last_status_log_hour
+
+        ma20_txt = round(ma20, 2) if ma20 is not None else "-"
+        ma60_txt = round(ma60, 2) if ma60 is not None else "-"
+        rsi_txt = round(rsi, 2) if rsi is not None else "-"
+
+        summary = (
+            f"{name}({code}) "
+            f"현재가={price}, "
+            f"보유={balance['holding_qty']}주, "
+            f"예수금={balance['cash']}, "
+            f"MA20={ma20_txt}, "
+            f"MA60={ma60_txt}, "
+            f"RSI={rsi_txt}, "
+            f"판단={signal['action']}, "
+            f"이유={signal['reason']}"
+        )
+
+        current_hour = datetime.now().hour
+
+        #
+        # BUY / SELL 발생 시 즉시 기록
+        #
+        if signal["action"] in ("BUY", "SELL"):
+            write_log("SIGNAL", summary)
+
+        #
+        # HOLD는 시간당 1번만 기록
+        #
+        elif current_hour != last_status_log_hour:
+            write_log("STATUS", summary)
+            last_status_log_hour = current_hour
 
     except Exception as e:
         print("전략 판단 실패:", e)
