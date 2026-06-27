@@ -1,4 +1,5 @@
 import time
+import random
 from datetime import datetime
 
 from ai_strategy import make_balance_info, ai_strategy
@@ -76,7 +77,7 @@ def run_once(api, config):
         print("현재가 조회 실패:", e)
         return
 
-    time.sleep(1)
+    time.sleep(random.uniform(1.5, 2.5))
 
     try:
         raw_balance = api.get_balance()
@@ -87,7 +88,7 @@ def run_once(api, config):
         print("잔고 조회 실패:", e)
         return
 
-    time.sleep(1)
+    time.sleep(random.uniform(1.5, 2.5))
 
     try:
         daily_prices = api.get_daily_prices(code, days=100)
@@ -107,6 +108,7 @@ def run_once(api, config):
             price,
             balance,
             buy_amount,
+            avg_buy_price=balance.get("avg_buy_price", 0),
             ma20=ma20,
             ma60=ma60,
             rsi=rsi,
@@ -132,7 +134,11 @@ def run_once(api, config):
             f"{name}({code}) "
             f"현재가={price}, "
             f"보유={balance['holding_qty']}주, "
-            f"예수금={balance['cash']}, "
+            f"총자산={balance['total']:,}, "
+            f"예수금={balance['cash']:,}, "
+            f"D+1={balance['d1_cash']:,}, "
+            f"D+2={balance['d2_cash']:,}, "
+            f"주문가능={balance['orderable_cash']:,}, "
             f"MA20={ma20_txt}, "
             f"MA60={ma60_txt}, "
             f"RSI={rsi_txt}, "
@@ -159,7 +165,7 @@ def run_once(api, config):
         print("전략 판단 실패:", e)
         return
 
-    time.sleep(1)
+    time.sleep(random.uniform(1.0, 2.0))
 
     if simulation_mode:
         print("SIMULATION 모드입니다. 실제 주문은 실행하지 않습니다.")

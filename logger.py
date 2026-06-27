@@ -10,17 +10,17 @@ def write_log(event, msg):
 
     now = datetime.now()
 
-    filename = now.strftime("%Y%m%d_%H") + ".log"
+    # 하루에 하나의 로그 파일
+    filename = now.strftime("%Y%m%d") + ".log"
     filepath = os.path.join(LOG_DIR, filename)
 
-    log_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
-    line = f"[{log_time}] [{event}] {msg}\n"
+    line = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] [{event}] {msg}\n"
 
     with open(filepath, "a", encoding="utf-8") as f:
         f.write(line)
 
-def write_error(msg):
+
+def write_error(event, msg=None):
     os.makedirs(LOG_DIR, exist_ok=True)
 
     now = datetime.now()
@@ -28,8 +28,19 @@ def write_error(msg):
     filename = "error_" + now.strftime("%Y%m%d") + ".log"
     filepath = os.path.join(LOG_DIR, filename)
 
-    line = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
+    if msg is None:
+        line = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {event}\n"
+    else:
+        line = f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] [{event}] {msg}\n"
 
     with open(filepath, "a", encoding="utf-8") as f:
         f.write(line)
-        
+
+
+def write_status(msg):
+    write_log("STATUS", msg)
+
+
+def write_signal(msg):
+    write_log("SIGNAL", msg)
+
