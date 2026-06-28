@@ -5,6 +5,8 @@ from datetime import datetime, time as dtime
 from kis_api import KisApi
 from market_bot import run_once
 from logger import write_log, write_error
+from indicator import calc_ma, calc_rsi
+
 
 HOLIDAYS = {
     "2026-01-01",
@@ -30,20 +32,71 @@ ACTIVE_START = dtime(8, 30)
 ACTIVE_END = dtime(15, 40)
 
 
+# 종목별 일봉/지표 캐시
+# key: stock_code
+# value: {"date": "YYYY-MM-DD", "ma20": ..., "ma60": ..., "rsi": ...}
+indicator_cache = {}
+
+
 def load_config(path="config_virtual.yaml"):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def get_stocks(config):
+    """
+    새 구조:
+      default_buy_amount: 5000000
+      stocks:
+        - code: "005930"
+          name: "삼성전자"
+          buy_amount: 5000000
+        - code: "000660"
+          name: "SK하이닉스"
+
+    기존 구조도 지원:
+      stock_code: "005930"
+      stock_name: "삼성전자"
+      buy_amount: 5000000
+    """
+    default_buy_amount = int(config.get("default_buy_amount", config.get("buy_amount", 1000000)))
+
+    stocks = config.get("stocks")
+    if stocks:
+        result = []
+        for stock in stocks:
+            code = stock.get("code") or stock.get("stock_code")
+            if not code:
+                continue
+
+            name = stock.get("name") or stock.get("stock_name") or code
+            buy_amount = int(stock.get("buy_amount", default_buy_amount))
+            enabled = stock.get("enabled", stock.get("enable", True))
+
+            if enabled is False:
+                continue
+
+            result.append({
+                "code": str(code),
+                "name": str(name),
+                "buy_amount": buy_amount,
+            })
+        return result
+
+    return [{
+        "code": str(config["stock_code"]),
+        "name": str(config.get("stock_name", config["stock_code"])),
+        "buy_amount": default_buy_amount,
+    }]
 
 
 def get_market_state():
     now = datetime.now()
     today = now.strftime("%Y-%m-%d")
 
-    # 주말
     if now.weekday() >= 5:
         return "WEEKEND", 3600
 
-    # 공휴일
     if today in HOLIDAYS:
         return "HOLIDAY", 3600
 
@@ -58,16 +111,21 @@ def get_market_state():
     return "OFF_MARKET", 1800
 
 
-def print_config(config):
+def print_config(config, stocks):
     print()
     print("========== 설정 정보 ==========")
     print("모드           :", config.get("mode"))
     print("URL            :", config.get("base_url"))
     print("계좌번호       :", config.get("cano"))
     print("계좌상품코드   :", config.get("acnt_prdt_cd"))
-    print("종목           :", config.get("stock_name"), config.get("stock_code"))
-    print("1회 매수한도   :", config.get("buy_amount"))
-    print("SIMU1LATION MODE:", config.get("simulation_mode"))
+    print("SIMULATION MODE:", config.get("simulation_mode"))
+    print("등록 종목 수   :", len(stocks))
+    print("---------- 등록 종목 ----------")
+    for idx, stock in enumerate(stocks, start=1):
+        print(
+            f"{idx}. {stock['name']} {stock['code']} "
+            f"/ 1회 매수한도 {stock['buy_amount']:,} 원"
+        )
     print("==============================")
 
 
@@ -84,12 +142,47 @@ def safe_get_token(api):
             time.sleep(60)
 
 
+def safe_get_balance(api):
+    try:
+        return api.get_balance()
+    except Exception as e:
+        print("잔고 조회 실패:", e)
+        write_error("BALANCE_ERROR", str(e))
+        return None
+
+
 def main():
     config = load_config("config_virtual.yaml")
-    print_config(config)
+    stocks = get_stocks(config)
+
+    print_config(config, stocks)
 
     api = KisApi(config)
     safe_get_token(api)
+
+    print()
+    print("========== 기술지표 초기 생성 ==========")
+
+    for stock in stocks:
+        try:
+            code = stock["code"]
+
+            print(f"{stock['name']} ({code})")
+
+            daily = api.get_daily_prices(code, days=100)
+
+            indicator_cache[code] = {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "ma20": calc_ma(daily, 20),
+                "ma60": calc_ma(daily, 60),
+                "rsi": calc_rsi(daily, 14),
+            }
+
+        except Exception as e:
+            write_error("INIT_INDICATOR_ERROR", f"{stock['name']}({code}) {e}")
+            print(f"{stock['name']} 초기 지표 생성 실패:", e)
+
+    print("기술지표 캐시 생성 완료.")
 
     print()
     print("========== 자동매매 항시 실행 시작 ==========")
@@ -115,22 +208,49 @@ def main():
             print("현재시간 :", now)
             print("상태     :", state)
             print("대기시간 :", sleep_sec, "초")
+            print("등록종목 :", len(stocks), "개")
             print("==============================")
 
             if state == "MARKET":
-                try:
-                    print("[DEBUG] run_once 시작")
+                # 핵심: 잔고 조회는 전체 루프에서 1회만 실행
+                raw_balance = safe_get_balance(api)
+                if raw_balance is None:
+                    print("잔고 조회 실패로 이번 회차 전체를 건너뜁니다.")
+                    time.sleep(sleep_sec)
+                    continue
 
-                    run_once(api, config)
+                for idx, stock in enumerate(stocks, start=1):
+                    try:
+                        print()
+                        print(f"[DEBUG] run_once 시작 ({idx}/{len(stocks)}) {stock['name']}({stock['code']})")
 
-                    print("[DEBUG] run_once 종료")
+                        result = run_once(
+                            api=api,
+                            config=config,
+                            stock=stock,
+                            raw_balance=raw_balance,
+                            indicator_cache=indicator_cache,
+                        )
 
-                except Exception as e:
-                    print("market_bot 오류:", e)
-                    write_error("MARKET_BOT_ERROR", str(e))
-                    print("이번 회차는 건너뛰고 계속 진행합니다.")
+                        print(f"[DEBUG] run_once 종료 ({idx}/{len(stocks)}) {stock['name']}({stock['code']})")
+
+                        # 주문이 실제 발생했다면 잔고가 바뀔 수 있으므로 한 번 갱신
+                        if result in ("BUY", "SELL"):
+                            print("주문 발생. 다음 종목 처리를 위해 잔고를 다시 조회합니다.")
+                            time.sleep(3)
+                            new_balance = safe_get_balance(api)
+                            if new_balance is not None:
+                                raw_balance = new_balance
+
+                        # 여러 종목 조회 시 API 초당 제한 방지
+                        time.sleep(2.5)
+
+                    except Exception as e:
+                        print("market_bot 오류:", e)
+                        write_error("MARKET_BOT_ERROR", f"{stock['name']}({stock['code']}) {e}")
+                        print("이번 종목은 건너뛰고 다음 종목으로 진행합니다.")
             else:
-                print("장외 시간입니다. 실행하지 않습니다.")
+                print("장외/주말/공휴일입니다. 실행하지 않습니다.")
 
             time.sleep(sleep_sec)
 

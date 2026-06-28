@@ -1,0 +1,25 @@
+mode: virtual
+simulation_mode: false
+
+base_url: "https://openapivts.koreainvestment.com:29443"
+
+app_key: "123"
+app_secret: "123"
+
+cano: "50194135"
+acnt_prdt_cd: "01"
+
+# 한 번 매수할 금액
+default_buy_amount: 1000000
+
+stocks:
+  - code: "005930"
+    name: "삼성전자"
+    buy_amount: 5000000
+
+  - code: "000660"
+    name: "SK하이닉스"
+    buy_amount: 3000000
+
+  - code: "035420"
+    name: "NAVER"
