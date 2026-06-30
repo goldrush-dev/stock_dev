@@ -32,14 +32,14 @@ def make_balance_info(data, stock_code):
     }
 
 
-def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=None, rsi=None):
+def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=None, rsi=None, rsi_buy_min=35, rsi_buy_max=60):
     """
     모의투자용 기본 자동매매 전략
 
     매수:
     - 보유 수량 0
     - MA20 > MA60 상승추세
-    - RSI 30~45 저점 반등 구간
+    - RSI rsi_buy_min~rsi_buy_max 반등 구간
     - buy_amount 만큼 매수
 
     매도:
@@ -93,7 +93,7 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
     # 보유 없으면 매수 판단
     if holding_qty == 0:
         up_trend = ma20 > ma60
-        rsi_rebound_zone = 30 <= rsi <= 45
+        rsi_rebound_zone = rsi_buy_min <= rsi <= rsi_buy_max
 
         fail_reasons = []
 
@@ -104,7 +104,7 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
             fail_reasons.append(f"상승추세 아님: MA20={ma20}, MA60={ma60}")
 
         if not rsi_rebound_zone:
-            fail_reasons.append(f"RSI 조건 미충족: 현재 RSI={rsi:.2f}, 필요 RSI=30~45")
+            fail_reasons.append(f"RSI 조건 미충족: 현재 RSI={rsi:.2f}, 필요 RSI={rsi_buy_min}~{rsi_buy_max}")
 
         if not fail_reasons:
             usable_amount = min(buy_amount, cash)

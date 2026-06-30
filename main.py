@@ -37,7 +37,6 @@ ACTIVE_END = dtime(15, 40)
 # value: {"date": "YYYY-MM-DD", "ma20": ..., "ma60": ..., "rsi": ...}
 indicator_cache = {}
 
-
 def load_config(path="config_virtual.yaml"):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -119,6 +118,7 @@ def print_config(config, stocks):
     print("계좌번호       :", config.get("cano"))
     print("계좌상품코드   :", config.get("acnt_prdt_cd"))
     print("SIMULATION MODE:", config.get("simulation_mode"))
+    print("RSI 매수범위    :", config.get("rsi_buy_min"), "~", config.get("rsi_buy_max"))
     print("등록 종목 수   :", len(stocks))
     print("---------- 등록 종목 ----------")
     for idx, stock in enumerate(stocks, start=1):
@@ -155,6 +155,9 @@ def main():
     config = load_config("config_virtual.yaml")
     stocks = get_stocks(config)
 
+    config["rsi_buy_min"] = int(config.get("rsi_buy_min", 35))
+    config["rsi_buy_max"] = int(config.get("rsi_buy_max", 60))
+
     print_config(config, stocks)
 
     api = KisApi(config)
@@ -172,7 +175,7 @@ def main():
             daily = api.get_daily_prices(code, days=100)
 
             indicator_cache[code] = {
-                "date": datetime.now().strftime("%Y-%m-%d"),
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "ma20": calc_ma(daily, 20),
                 "ma60": calc_ma(daily, 60),
                 "rsi": calc_rsi(daily, 14),

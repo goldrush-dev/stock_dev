@@ -9,17 +9,30 @@ app_secret: "123"
 cano: "50194135"
 acnt_prdt_cd: "01"
 
+# RSI 매수 조건
+rsi_buy_min: 35
+rsi_buy_max: 60
+
 # 한 번 매수할 금액
 default_buy_amount: 1000000
 
 stocks:
   - code: "005930"
     name: "삼성전자"
-    buy_amount: 5000000
+    buy_amount: 2000000
 
   - code: "000660"
     name: "SK하이닉스"
     buy_amount: 3000000
 
-  - code: "035420"
-    name: "NAVER"
+  - code: "207940"
+    name: "삼성바이오로직스"
+    buy_amount: 3000000
+
+  - code: "000880"
+    name: "한화"
+    buy_amount: 1000000
+
+  - code: "005380"
+    name: "현대자동차"
+    buy_amount: 1000000

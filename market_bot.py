@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+from datetime import timedelta
 
 from ai_strategy import make_balance_info, ai_strategy
 from indicator import calc_ma, calc_rsi
@@ -11,13 +12,17 @@ last_status_log_hour = {}
 
 
 def print_balance(balance):
+    usable_cash = balance["orderable_cash"]
+    if usable_cash <= 0:
+        usable_cash = balance["cash"]
+
     print()
     print("========== 나의 자산 ==========")
     print("총평가금액     :", f"{balance['total']:,}", "원")
     print("예수금         :", f"{balance['cash']:,}", "원")
     print("D+1 예수금     :", f"{balance['d1_cash']:,}", "원")
     print("D+2 예수금     :", f"{balance['d2_cash']:,}", "원")
-    print("주문가능금액   :", f"{balance['orderable_cash']:,}", "원")
+    print("주문가능금액   :", f"{usable_cash:,}", "원")
     print("보유수량       :", f"{balance['holding_qty']:,}", "주")
     print("==============================")
 
@@ -77,12 +82,14 @@ def _resolve_stock(config, stock=None):
 
 
 def get_cached_indicators(api, code, indicator_cache):
-    today = datetime.now().strftime("%Y-%m-%d")
     cached = indicator_cache.get(code)
 
-    if cached and cached.get("date") == today:
-        print("기술지표 캐시 사용")
-        return cached["ma20"], cached["ma60"], cached["rsi"]
+    if cached and "time" in cached:
+        last_time = datetime.strptime(cached["time"], "%Y-%m-%d %H:%M:%S")
+
+        if datetime.now() - last_time < timedelta(minutes=30):
+            print("기술지표 캐시 사용")
+            return cached["ma20"], cached["ma60"], cached["rsi"]
 
     print("기술지표 신규 계산")
     daily_prices = api.get_daily_prices(code, days=100)
@@ -92,7 +99,7 @@ def get_cached_indicators(api, code, indicator_cache):
     rsi = calc_rsi(daily_prices, 14)
 
     indicator_cache[code] = {
-        "date": today,
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ma20": ma20,
         "ma60": ma60,
         "rsi": rsi,
@@ -151,12 +158,8 @@ def run_once(api, config, stock=None, raw_balance=None, indicator_cache=None):
     time.sleep(random.uniform(1.0, 1.8))
 
     try:
-        # 핵심: 일봉/지표는 종목별 하루 1회만 조회/계산
-        cache = indicator_cache[code]
-        ma20 = cache["ma20"]
-        ma60 = cache["ma60"]
-        rsi = cache["rsi"]
-        #ma20, ma60, rsi = get_cached_indicators(api, code, indicator_cache)
+        # 핵심: 일봉/지표는 종목별 30분마다 조회
+        ma20, ma60, rsi = get_cached_indicators(api, code, indicator_cache)
 
         print()
         print("========== 기술 지표 ==========")
@@ -173,6 +176,8 @@ def run_once(api, config, stock=None, raw_balance=None, indicator_cache=None):
             ma20=ma20,
             ma60=ma60,
             rsi=rsi,
+            rsi_buy_min=config["rsi_buy_min"],
+            rsi_buy_max=config["rsi_buy_max"],
         )
 
         print()
@@ -188,6 +193,10 @@ def run_once(api, config, stock=None, raw_balance=None, indicator_cache=None):
         ma60_txt = round(ma60, 2) if ma60 is not None else "-"
         rsi_txt = round(rsi, 2) if rsi is not None else "-"
 
+        usable_cash = balance["orderable_cash"]
+        if usable_cash <= 0:
+            usable_cash = balance["cash"]
+
         summary = (
             f"{name}({code}) "
             f"현재가={price:,}, "
@@ -196,7 +205,7 @@ def run_once(api, config, stock=None, raw_balance=None, indicator_cache=None):
             f"예수금={balance['cash']:,}, "
             f"D+1={balance['d1_cash']:,}, "
             f"D+2={balance['d2_cash']:,}, "
-            f"주문가능={balance['orderable_cash']:,}, "
+            f"주문가능={usable_cash:,}, "
             f"1회매수한도={buy_amount:,}, "
             f"MA20={ma20_txt}, "
             f"MA60={ma60_txt}, "
