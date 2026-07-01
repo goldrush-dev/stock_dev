@@ -70,6 +70,8 @@ def get_stocks(config):
 
             name = stock.get("name") or stock.get("stock_name") or code
             buy_amount = int(stock.get("buy_amount", default_buy_amount))
+            stop_loss = float(stock.get("stop_loss", config.get("stop_loss", 2.0)))
+            take_profit = float(stock.get("take_profit", config.get("take_profit", 3.0)))
             enabled = stock.get("enabled", stock.get("enable", True))
 
             if enabled is False:
@@ -79,6 +81,8 @@ def get_stocks(config):
                 "code": str(code),
                 "name": str(name),
                 "buy_amount": buy_amount,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
             })
         return result
 
@@ -86,6 +90,8 @@ def get_stocks(config):
         "code": str(config["stock_code"]),
         "name": str(config.get("stock_name", config["stock_code"])),
         "buy_amount": default_buy_amount,
+        "stop_loss": float(config.get("stop_loss", 2.0)),
+        "take_profit": float(config.get("take_profit", 3.0)),
     }]
 
 
@@ -124,7 +130,9 @@ def print_config(config, stocks):
     for idx, stock in enumerate(stocks, start=1):
         print(
             f"{idx}. {stock['name']} {stock['code']} "
-            f"/ 1회 매수한도 {stock['buy_amount']:,} 원"
+            f"/ 1회 매수한도 {stock['buy_amount']:,} 원 "
+            f"/ 손절 -{stock.get('stop_loss', 2.0)}% "
+            f"/ 익절 +{stock.get('take_profit', 3.0)}%"
         )
     print("==============================")
 

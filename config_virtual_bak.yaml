@@ -3,15 +3,14 @@ simulation_mode: false
 
 base_url: "https://openapivts.koreainvestment.com:29443"
 
-app_key: "123"
-app_secret: "123"
-
+app_key: "PSxpyGbqGu2w24wce4A"
+app_secret: "F8ujHmSG+t00yU
 cano: "50194135"
 acnt_prdt_cd: "01"
 
 # RSI 매수 조건
 rsi_buy_min: 35
-rsi_buy_max: 60
+rsi_buy_max: 57
 
 # 한 번 매수할 금액
 default_buy_amount: 1000000
@@ -20,19 +19,48 @@ stocks:
   - code: "005930"
     name: "삼성전자"
     buy_amount: 2000000
+    stop_loss: 2.0
+    take_profit: 4.0
 
   - code: "000660"
     name: "SK하이닉스"
-    buy_amount: 3000000
-
-  - code: "207940"
-    name: "삼성바이오로직스"
-    buy_amount: 3000000
-
-  - code: "000880"
-    name: "한화"
-    buy_amount: 1000000
+    buy_amount: 2000000
+    stop_loss: 2.5
+    take_profit: 5.0
 
   - code: "005380"
     name: "현대자동차"
     buy_amount: 1000000
+    stop_loss: 2.0
+    take_profit: 4.0
+
+  - code: "000270"
+    name: "기아"
+    buy_amount: 1000000
+    stop_loss: 2.0
+    take_profit: 4.0
+
+  - code: "012450"
+    name: "한화에어로스페이스"
+    buy_amount: 1000000
+    stop_loss: 3.0
+    take_profit: 6.0
+
+  - code: "028260"
+    name: "삼성물산"
+    buy_amount: 1000000
+    stop_loss: 2.0
+    take_profit: 4.0
+
+  - code: "105560"
+    name: "KB금융"
+    buy_amount: 1000000
+    stop_loss: 2.0
+    take_profit: 3.5
+
+  - code: "055550"
+    name: "신한지주"
+    buy_amount: 1000000
+    stop_loss: 2.0
+    take_profit: 3.5
+    

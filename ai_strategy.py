@@ -32,7 +32,19 @@ def make_balance_info(data, stock_code):
     }
 
 
-def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=None, rsi=None, rsi_buy_min=35, rsi_buy_max=60):
+def ai_strategy(
+    price,
+    balance,
+    buy_amount,
+    avg_buy_price=0,
+    ma20=None,
+    ma60=None,
+    rsi=None,
+    rsi_buy_min=35,
+    rsi_buy_max=60,
+    stop_loss=2.0,
+    take_profit=3.0,
+):
     """
     모의투자용 기본 자동매매 전략
 
@@ -44,8 +56,8 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
 
     매도:
     - 보유 수량 있음
-    - 수익률 +3% 이상 익절
-    - 수익률 -2% 이하 손절
+    - 수익률 take_profit% 이상 익절
+    - 수익률 -stop_loss% 이하 손절
     """
 
     holding_qty = int(balance.get("holding_qty", 0))
@@ -67,7 +79,7 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
     if holding_qty > 0 and avg_buy_price > 0:
         profit_rate = (price - avg_buy_price) / avg_buy_price * 100
 
-        if profit_rate >= 3.0:
+        if profit_rate >= take_profit:
             return {
                 "action": "SELL",
                 "qty": holding_qty,
@@ -75,7 +87,7 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
                 "reason": f"익절 조건 충족: 수익률={profit_rate:.2f}%"
             }
 
-        if profit_rate <= -2.0:
+        if profit_rate <= -stop_loss:
             return {
                 "action": "SELL",
                 "qty": holding_qty,
@@ -87,7 +99,7 @@ def ai_strategy(price, balance, buy_amount, avg_buy_price=0, ma20=None, ma60=Non
             "action": "HOLD",
             "qty": 0,
             "price": price,
-            "reason": f"보유 유지: 수익률={profit_rate:.2f}%, 익절=+3%, 손절=-2%"
+            "reason": f"보유 유지: 수익률={profit_rate:.2f}%, 익절=+{take_profit}%, 손절=-{stop_loss}%"
         }
 
     # 보유 없으면 매수 판단
